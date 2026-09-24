@@ -1,0 +1,294 @@
+﻿@{
+    ViewData["Title"] = "Feedback Inbox";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+
+    <div>
+        <div class="page-title">
+            Feedback Inbox
+        </div>
+
+        <div class="page-subtitle">
+            Search, filter and manage customer feedback.
+        </div>
+    </div>
+
+    <div>
+
+        <a asp-action="Import"
+           class="btn btn-outline-secondary me-2">
+            Import CSV
+        </a>
+
+        <a asp-action="Create"
+           class="btn btn-loop">
+            + Add Feedback
+        </a>
+
+    </div>
+
+</div>
+
+
+<div class="loop-card">
+
+    <div class="row g-3">
+
+        <div class="col-md-4">
+
+            <input class="form-control loop-search"
+                   placeholder="🔍 Search feedback..." />
+
+        </div>
+
+        <div class="col-md-2">
+
+            <select class="form-select">
+
+                <option>All Channels</option>
+                <option>Support Ticket</option>
+                <option>App Store</option>
+                <option>NPS Survey</option>
+                <option>Sales Call</option>
+                <option>Community</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="col-md-2">
+
+            <select class="form-select">
+
+                <option>All Sentiments</option>
+                <option>Positive</option>
+                <option>Neutral</option>
+                <option>Negative</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="col-md-2">
+
+            <select class="form-select">
+
+                <option>All Status</option>
+                <option>New</option>
+                <option>Reviewed</option>
+                <option>Actioned</option>
+
+            </select>
+
+        </div>
+
+        <div class="col-md-2">
+
+            <button class="btn btn-outline-secondary w-100">
+                Filter
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="loop-table">
+
+    <table class="table">
+
+        <thead>
+
+            <tr>
+
+                <th>Feedback</th>
+                <th>Channel</th>
+                <th>Sentiment</th>
+                <th>Theme</th>
+                <th>Status</th>
+                <th>Date</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            <tr>
+
+                <td>
+                    Onboarding is very confusing...
+                </td>
+
+                <td>
+                    Support Ticket
+                </td>
+
+                <td>
+                    <span class="badge badge-negative">
+                        Negative
+                    </span>
+                </td>
+
+                <td>
+                    Onboarding
+                </td>
+
+                <td>
+                    <span class="badge badge-new">
+                        NEW
+                    </span>
+                </td>
+
+                <td>
+                    Sep 15, 2026
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>
+                    The new dashboard is excellent...
+                </td>
+
+                <td>
+                    App Store
+                </td>
+
+                <td>
+                    <span class="badge badge-positive">
+                        Positive
+                    </span>
+                </td>
+
+                <td>
+                    Dashboard
+                </td>
+
+                <td>
+                    <span class="badge badge-reviewed">
+                        REVIEWED
+                    </span>
+                </td>
+
+                <td>
+                    Sep 14, 2026
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>
+                    Mobile application crashes frequently...
+                </td>
+
+                <td>
+                    NPS Survey
+                </td>
+
+                <td>
+                    <span class="badge badge-negative">
+                        Negative
+                    </span>
+                </td>
+
+                <td>
+                    Mobile App
+                </td>
+
+                <td>
+                    <span class="badge badge-new">
+                        NEW
+                    </span>
+                </td>
+
+                <td>
+                    Sep 13, 2026
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>
+                    Export feature saved me a lot of time.
+                </td>
+
+                <td>
+                    Community
+                </td>
+
+                <td>
+                    <span class="badge badge-positive">
+                        Positive
+                    </span>
+                </td>
+
+                <td>
+                    Export
+                </td>
+
+                <td>
+                    <span class="badge badge-actioned">
+                        ACTIONED
+                    </span>
+                </td>
+
+                <td>
+                    Sep 12, 2026
+                </td>
+
+            </tr>
+
+        </tbody>
+
+    </table>
+
+</div>
+
+
+<div class="d-flex justify-content-between align-items-center mt-3">
+
+    <span class="text-muted">
+        Showing 1–4 of 1,248 feedback items
+    </span>
+
+    <nav>
+
+        <ul class="pagination">
+
+            <li class="page-item disabled">
+                <a class="page-link">Previous</a>
+            </li>
+
+            <li class="page-item active">
+                <a class="page-link">1</a>
+            </li>
+
+            <li class="page-item">
+                <a class="page-link">2</a>
+            </li>
+
+            <li class="page-item">
+                <a class="page-link">3</a>
+            </li>
+
+            <li class="page-item">
+                <a class="page-link">Next</a>
+            </li>
+
+        </ul>
+
+    </nav>
+
+</div>

@@ -1,0 +1,233 @@
+﻿@{
+    ViewData["Title"] = "Trends";
+}
+
+<div class="page-title">
+    Themes & Trends
+</div>
+
+<div class="page-subtitle">
+    Discover what customers are talking about and what is changing.
+</div>
+
+
+<div class="row g-4">
+
+    <div class="col-lg-5">
+
+        <div class="loop-card">
+
+            <div class="loop-card-title">
+                Top Themes
+            </div>
+
+
+            <div class="mb-4">
+
+                <div class="d-flex justify-content-between mb-1">
+                    <strong>Onboarding</strong>
+                    <span>342</span>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:90%">
+                    </div>
+                </div>
+
+                <small class="text-danger">
+                    ↑ 60% vs previous period
+                </small>
+
+            </div>
+
+
+            <div class="mb-4">
+
+                <div class="d-flex justify-content-between mb-1">
+                    <strong>Billing</strong>
+                    <span>218</span>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:65%">
+                    </div>
+                </div>
+
+                <small class="text-success">
+                    ↓ 8% vs previous period
+                </small>
+
+            </div>
+
+
+            <div class="mb-4">
+
+                <div class="d-flex justify-content-between mb-1">
+                    <strong>Performance</strong>
+                    <span>185</span>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:55%">
+                    </div>
+                </div>
+
+                <small class="text-danger">
+                    ↑ 34% vs previous period
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-lg-7">
+
+        <div class="loop-card">
+
+            <div class="loop-card-title">
+                Theme Volume Over Time
+            </div>
+
+            <canvas id="trendChart"></canvas>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="loop-card">
+
+    <div class="loop-card-title">
+        🔥 Spiking Themes
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-4">
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Onboarding
+                </div>
+
+                <div class="stat-value">
+                    +60%
+                </div>
+
+                <div class="negative">
+                    Significant increase
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Performance
+                </div>
+
+                <div class="stat-value">
+                    +34%
+                </div>
+
+                <div class="negative">
+                    Increasing
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Billing
+                </div>
+
+                <div class="stat-value">
+                    -8%
+                </div>
+
+                <div class="positive">
+                    Improving
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+        new Chart(
+            document.getElementById('trendChart'),
+            {
+                type: 'line',
+
+                data: {
+
+                    labels: [
+                        'Sep 1',
+                        'Sep 3',
+                        'Sep 5',
+                        'Sep 7',
+                        'Sep 9',
+                        'Sep 11',
+                        'Sep 13'
+                    ],
+
+                    datasets: [
+
+                        {
+                            label: 'Onboarding',
+                            data: [30, 42, 48, 65, 72, 95, 110],
+                            tension: .4
+                        },
+
+                        {
+                            label: 'Billing',
+                            data: [50, 48, 52, 45, 43, 42, 40],
+                            tension: .4
+                        },
+
+                        {
+                            label: 'Performance',
+                            data: [25, 30, 35, 38, 45, 50, 62],
+                            tension: .4
+                        }
+
+                    ]
+
+                }
+
+            }
+        );
+
+    </script>
+
+}

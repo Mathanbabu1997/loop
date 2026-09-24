@@ -1,0 +1,105 @@
+﻿@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="page-title">
+    Workspace Settings
+</div>
+
+<div class="page-subtitle">
+    Manage your workspace and team members.
+</div>
+
+
+<div class="loop-card">
+
+    <div class="loop-card-title">
+        Workspace
+    </div>
+
+    <div class="mb-3">
+
+        <label class="form-label">
+            Workspace Name
+        </label>
+
+        <input class="form-control"
+               value="LOOP Technologies" />
+
+    </div>
+
+    <button class="btn btn-loop">
+        Save Changes
+    </button>
+
+</div>
+
+
+<div class="loop-card">
+
+    <div class="d-flex justify-content-between">
+
+        <div class="loop-card-title">
+            Members
+        </div>
+
+        <button class="btn btn-loop">
+            + Add Member
+        </button>
+
+    </div>
+
+
+    <div class="loop-table">
+
+        <table class="table">
+
+            <thead>
+
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                <tr>
+                    <td>Babu</td>
+                    <td>babu@example.com</td>
+                    <td>
+                        <span class="badge bg-primary">
+                            ADMIN
+                        </span>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Arun</td>
+                    <td>arun@example.com</td>
+                    <td>
+                        <span class="badge bg-warning text-dark">
+                            ANALYST
+                        </span>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Ravi</td>
+                    <td>ravi@example.com</td>
+                    <td>
+                        <span class="badge bg-secondary">
+                            VIEWER
+                        </span>
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

@@ -1,0 +1,82 @@
+﻿@{
+    ViewData["Title"] = "Add Feedback";
+}
+
+<div class="page-title">
+    Add Feedback
+</div>
+
+<div class="page-subtitle">
+    Add a customer feedback item.
+</div>
+
+
+<div class="row">
+
+    <div class="col-lg-8">
+
+        <div class="loop-card">
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Feedback
+                </label>
+
+                <textarea class="form-control"
+                          rows="6"
+                          placeholder="Enter customer feedback..."></textarea>
+
+            </div>
+
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Channel
+                </label>
+
+                <select class="form-select">
+
+                    <option>Select channel</option>
+                    <option>Support Ticket</option>
+                    <option>App Store Review</option>
+                    <option>NPS Survey</option>
+                    <option>Sales Call Note</option>
+                    <option>Community Post</option>
+
+                </select>
+
+            </div>
+
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Customer Label
+                </label>
+
+                <input class="form-control"
+                       placeholder="Example: Enterprise Customer" />
+
+            </div>
+
+
+            <div class="d-flex justify-content-end gap-2">
+
+                <a asp-action="Index"
+                   class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+
+                <button class="btn btn-loop">
+                    Add Feedback
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

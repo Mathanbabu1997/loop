@@ -1,8 +1,297 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="page-title">
+    Dashboard
 </div>
+
+<div class="page-subtitle">
+    Here's what's happening with your customer feedback.
+</div>
+
+
+<!-- STAT CARDS -->
+
+<div class="row g-4 mb-4">
+
+    <div class="col-md-4">
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Total Feedback
+            </div>
+
+            <div class="stat-value">
+                1,248
+            </div>
+
+            <div class="stat-change positive">
+                ↑ 12.5% this month
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-4">
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Negative Feedback
+            </div>
+
+            <div class="stat-value">
+                28.4%
+            </div>
+
+            <div class="stat-change negative">
+                ↑ 4.2% this week
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-4">
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                New This Week
+            </div>
+
+            <div class="stat-value">
+                156
+            </div>
+
+            <div class="stat-change positive">
+                ↑ 8.7%
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- VOLUME CHART -->
+
+<div class="loop-card">
+
+    <div class="loop-card-title">
+        Feedback Volume
+    </div>
+
+    <canvas id="volumeChart"
+            height="90">
+    </canvas>
+
+</div>
+
+
+<div class="row g-4">
+
+    <!-- SENTIMENT -->
+
+    <div class="col-md-6">
+
+        <div class="loop-card">
+
+            <div class="loop-card-title">
+                Sentiment Breakdown
+            </div>
+
+            <canvas id="sentimentChart"
+                    height="220">
+            </canvas>
+
+        </div>
+
+    </div>
+
+
+    <!-- THEMES -->
+
+    <div class="col-md-6">
+
+        <div class="loop-card">
+
+            <div class="loop-card-title">
+                Top Themes
+            </div>
+
+
+            <div class="mb-3">
+
+                <div class="d-flex justify-content-between">
+                    <span>Onboarding</span>
+                    <strong>342</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:85%">
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="mb-3">
+
+                <div class="d-flex justify-content-between">
+                    <span>Billing</span>
+                    <strong>218</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:65%">
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="mb-3">
+
+                <div class="d-flex justify-content-between">
+                    <span>Performance</span>
+                    <strong>185</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:55%">
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div>
+
+                <div class="d-flex justify-content-between">
+                    <span>Mobile App</span>
+                    <strong>142</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width:42%">
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+        const volumeContext =
+            document.getElementById('volumeChart');
+
+        new Chart(volumeContext, {
+
+            type: 'line',
+
+            data: {
+
+                labels: [
+                    'Mon',
+                    'Tue',
+                    'Wed',
+                    'Thu',
+                    'Fri',
+                    'Sat',
+                    'Sun'
+                ],
+
+                datasets: [{
+
+                    label: 'Feedback',
+
+                    data: [
+                        120,
+                        180,
+                        150,
+                        220,
+                        190,
+                        260,
+                        300
+                    ],
+
+                    tension: 0.4,
+
+                    fill: true
+
+                }]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+
+            }
+
+        });
+
+
+        const sentimentContext =
+            document.getElementById('sentimentChart');
+
+        new Chart(sentimentContext, {
+
+            type: 'doughnut',
+
+            data: {
+
+                labels: [
+                    'Positive',
+                    'Neutral',
+                    'Negative'
+                ],
+
+                datasets: [{
+
+                    data: [
+                        45,
+                        27,
+                        28
+                    ]
+
+                }]
+
+            },
+
+            options: {
+                responsive: true
+            }
+
+        });
+
+    </script>
+
+}
