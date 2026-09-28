@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL = "https://localhost:7248/api/Settings";
+const API_URL = "https://loop-api-s464.onrender.com/api/Settings";
 
 interface Profile {
   id: string;

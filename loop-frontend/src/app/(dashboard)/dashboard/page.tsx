@@ -59,7 +59,7 @@ export default function DashboardPage() {
     const loadDashboard = async () => {
       try {
         const response = await fetch(
-          "https://localhost:7248/api/Dashboard",
+          "https://loop-api-s464.onrender.com/api/Dashboard",
           {
             method: "GET",
             headers: {

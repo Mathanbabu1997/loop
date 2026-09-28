@@ -16,7 +16,7 @@ interface Member {
 }
 
 const API_URL =
-  "https://localhost:7248/api/Members";
+  "https://loop-api-s464.onrender.com/api/Members";
 
 export default function MembersPage() {
   const router = useRouter();

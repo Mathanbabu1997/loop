@@ -177,7 +177,7 @@ export default function ReportsPage() {
       }
 
       const response = await fetch(
-        "https://localhost:7248/api/Report/saved",
+        "https://loop-api-s464.onrender.com/api/Report/saved",
         {
           method: "GET",
           headers: {
@@ -237,7 +237,7 @@ export default function ReportsPage() {
       }
 
       const response = await fetch(
-        "https://localhost:7248/api/Report/generate",
+        "https://loop-api-s464.onrender.com/api/Report/generate",
         {
           method: "POST",
 
@@ -316,7 +316,7 @@ export default function ReportsPage() {
       }
 
       const response = await fetch(
-        `https://localhost:7248/api/Report/${id}`,
+        `https://loop-api-s464.onrender.com/api/Report/${id}`,
         {
           method: "GET",
 

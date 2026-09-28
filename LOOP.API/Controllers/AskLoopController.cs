@@ -29,6 +29,7 @@ namespace LOOP.API.Controllers
         // =========================================================
         // POST: api/AskLoop
         // =========================================================
+
         [HttpPost]
         public async Task<IActionResult> Ask(
             [FromBody] AskLoopRequest request)
@@ -67,13 +68,15 @@ namespace LOOP.API.Controllers
 
 
                 // =================================================
-                // 3. GET ALL FEEDBACK
+                // 3. LOAD ALL FEEDBACK
                 // =================================================
-                // IMPORTANT:
-                // No Take(30)
                 //
-                // If you have 110 records,
-                // all 110 records will be loaded.
+                // IMPORTANT:
+                // DO NOT USE Take(30) HERE.
+                //
+                // If workspace has 210 records,
+                // all 210 records will be loaded.
+                //
                 // =================================================
 
                 var feedback = await _context.Feedbacks
@@ -101,53 +104,20 @@ namespace LOOP.API.Controllers
                     return Ok(new
                     {
                         answer =
-                            "There is no customer feedback available yet."
+                            "There is no customer feedback available yet.",
+
+                        totalFeedback = 0
                     });
                 }
 
 
                 Console.WriteLine(
-                    $"Ask LOOP -> Total feedback records: {feedback.Count}"
+                    $"Ask LOOP -> Total feedback records loaded: {feedback.Count}"
                 );
 
 
                 // =================================================
-                // 5. BUILD COMPACT FEEDBACK TEXT
-                // =================================================
-                //
-                // We keep all records but remove unnecessary labels
-                // to reduce request size.
-                // =================================================
-
-                var feedbackBuilder =
-                    new StringBuilder();
-
-                for (int i = 0; i < feedback.Count; i++)
-                {
-                    var f = feedback[i];
-
-                    feedbackBuilder.AppendLine(
-                        $"#{i + 1} | " +
-                        $"Content: {f.Content} | " +
-                        $"Channel: {f.Channel} | " +
-                        $"Sentiment: {f.Sentiment} | " +
-                        $"Score: {f.SentimentScore} | " +
-                        $"Customer: {f.CustomerLabel} | " +
-                        $"Date: {f.CreatedAt:yyyy-MM-dd}"
-                    );
-                }
-
-                var feedbackText =
-                    feedbackBuilder.ToString();
-
-
-                Console.WriteLine(
-                    $"Ask LOOP -> Feedback characters: {feedbackText.Length}"
-                );
-
-
-                // =================================================
-                // 6. GROQ API KEY
+                // 5. GROQ API KEY
                 // =================================================
 
                 var apiKey =
@@ -164,7 +134,7 @@ namespace LOOP.API.Controllers
 
 
                 // =================================================
-                // 7. GROQ MODEL
+                // 6. GROQ MODEL
                 // =================================================
 
                 var model =
@@ -177,88 +147,17 @@ namespace LOOP.API.Controllers
 
 
                 // =================================================
-                // 8. PROMPT
+                // 7. BATCH SETTINGS
                 // =================================================
 
-                var prompt = $"""
-                You are LOOP, a customer feedback intelligence assistant.
+                const int batchSize = 30;
 
-                Analyze the customer feedback provided below.
-
-                IMPORTANT RULES:
-
-                - Answer the user's question using ONLY the provided
-                  customer feedback.
-                - Do not invent information.
-                - Do not make assumptions outside the feedback.
-                - If there is not enough information, say:
-                  "There is not enough feedback data to answer this."
-                - Give a clear and concise business answer.
-                - When useful, mention counts or percentages.
-                - If the user asks about complaints, focus on negative
-                  feedback.
-                - If the user asks about satisfaction, focus on positive
-                  feedback.
-                - If the user asks about themes, identify repeated
-                  patterns.
-                - If the user asks about sentiment, analyze the
-                  Sentiment field.
-                - Consider ALL feedback records below.
-
-                Total feedback records: {feedback.Count}
-
-                USER QUESTION:
-                {request.Question}
-
-                CUSTOMER FEEDBACK:
-                {feedbackText}
-                """;
+                var batchAnalyses =
+                    new List<string>();
 
 
                 // =================================================
-                // 9. REQUEST BODY
-                // =================================================
-
-                var requestBody = new
-                {
-                    model = model,
-
-                    messages = new object[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content =
-                                "You are LOOP, a customer feedback " +
-                                "intelligence assistant. " +
-                                "Only use the customer feedback supplied " +
-                                "in the user message."
-                        },
-
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-
-                    temperature = 0.2,
-
-                    max_tokens = 500
-                };
-
-
-                var json =
-                    JsonSerializer.Serialize(requestBody);
-
-
-                Console.WriteLine(
-                    $"Ask LOOP -> Request size: {json.Length} characters"
-                );
-
-
-                // =================================================
-                // 10. HTTP CLIENT
+                // 8. HTTP CLIENT
                 // =================================================
 
                 using var client = new HttpClient();
@@ -272,7 +171,6 @@ namespace LOOP.API.Controllers
                         apiKey
                     );
 
-
                 client.DefaultRequestHeaders.Accept.Add(
                     new MediaTypeWithQualityHeaderValue(
                         "application/json"
@@ -281,461 +179,412 @@ namespace LOOP.API.Controllers
 
 
                 // =================================================
-                // 11. RETRY
+                // 9. PROCESS FEEDBACK IN BATCHES
                 // =================================================
 
-                const int maxAttempts = 3;
+                int totalBatches =
+                    (int)Math.Ceiling(
+                        feedback.Count /
+                        (double)batchSize
+                    );
 
 
-                // =================================================
-                // 12. CALL GROQ
-                // =================================================
+                Console.WriteLine(
+                    $"Ask LOOP -> Processing {totalBatches} batches of {batchSize} records."
+                );
+
 
                 for (
-                    int attempt = 1;
-                    attempt <= maxAttempts;
-                    attempt++)
+                    int batchNumber = 0;
+                    batchNumber < totalBatches;
+                    batchNumber++
+                )
                 {
-                    try
+                    int skip =
+                        batchNumber * batchSize;
+
+
+                    var batch =
+                        feedback
+                            .Skip(skip)
+                            .Take(batchSize)
+                            .ToList();
+
+
+                    Console.WriteLine(
+                        $"Ask LOOP -> Processing batch {batchNumber + 1}/{totalBatches} with {batch.Count} records."
+                    );
+
+
+                    // =================================================
+                    // BUILD BATCH TEXT
+                    // =================================================
+
+                    var batchBuilder =
+                        new StringBuilder();
+
+
+                    for (int i = 0; i < batch.Count; i++)
                     {
-                        using var content =
-                            new StringContent(
-                                json,
-                                Encoding.UTF8,
-                                "application/json"
-                            );
+                        var f = batch[i];
 
-
-                        Console.WriteLine(
-                            $"Ask LOOP -> Groq attempt " +
-                            $"{attempt}/{maxAttempts}"
+                        batchBuilder.AppendLine(
+                            $"#{skip + i + 1} | " +
+                            $"Content: {f.Content} | " +
+                            $"Channel: {f.Channel} | " +
+                            $"Sentiment: {f.Sentiment} | " +
+                            $"Score: {f.SentimentScore} | " +
+                            $"Customer: {f.CustomerLabel} | " +
+                            $"Date: {f.CreatedAt:yyyy-MM-dd}"
                         );
+                    }
 
 
-                        var response =
-                            await client.PostAsync(
-                                "https://api.groq.com/openai/v1/chat/completions",
-                                content
-                            );
+                    var batchText =
+                        batchBuilder.ToString();
 
 
-                        var responseText =
-                            await response.Content.ReadAsStringAsync();
+                    // =================================================
+                    // BATCH PROMPT
+                    // =================================================
+
+                    var batchPrompt = $"""
+You are LOOP, a customer feedback intelligence assistant.
+
+Analyze ONLY the customer feedback in this batch.
+
+The user asked:
+
+{request.Question}
+
+Rules:
+
+- Use ONLY the feedback provided below.
+- Do not invent information.
+- Do not make assumptions outside the feedback.
+- Identify information relevant to the user's question.
+- Mention exact counts when possible.
+- Identify repeated complaints, positive points, themes,
+  sentiment patterns, or other relevant evidence.
+- Keep the response concise.
+- This is an intermediate analysis.
+- Do NOT say that this is the final answer.
+- Preserve important facts that may be needed for the final answer.
+
+Batch:
+{batchNumber + 1} of {totalBatches}
+
+Records in this batch:
+{batch.Count}
+
+CUSTOMER FEEDBACK:
+
+{batchText}
+""";
 
 
-                        // =================================================
-                        // DEBUG
-                        // =================================================
+                    // =================================================
+                    // GROQ REQUEST BODY
+                    // =================================================
 
-                        Console.WriteLine(
-                            "=========================================="
-                        );
+                    var batchRequestBody = new
+                    {
+                        model = model,
 
-                        Console.WriteLine(
-                            $"GROQ STATUS: {(int)response.StatusCode}"
-                        );
-
-                        Console.WriteLine(
-                            $"GROQ RESPONSE: {responseText}"
-                        );
-
-                        Console.WriteLine(
-                            "=========================================="
-                        );
-
-
-                        // =================================================
-                        // SUCCESS
-                        // =================================================
-
-                        if (response.IsSuccessStatusCode)
+                        messages = new object[]
                         {
-                            using var document =
-                                JsonDocument.Parse(responseText);
-
-
-                            if (!document.RootElement.TryGetProperty(
-                                "choices",
-                                out var choices))
+                            new
                             {
-                                return StatusCode(502, new
-                                {
-                                    message =
-                                        "Groq returned an unexpected response.",
+                                role = "system",
 
-                                    groqResponse =
-                                        responseText
-                                });
+                                content =
+                                    "You are LOOP, a customer feedback " +
+                                    "intelligence assistant. " +
+                                    "Analyze only the supplied customer feedback."
+                            },
+
+                            new
+                            {
+                                role = "user",
+
+                                content = batchPrompt
                             }
+                        },
+
+                        temperature = 0.2,
+
+                        max_tokens = 300
+                    };
 
 
-                            if (choices.GetArrayLength() == 0)
-                            {
-                                return StatusCode(502, new
-                                {
-                                    message =
-                                        "Groq did not generate an answer.",
-
-                                    groqResponse =
-                                        responseText
-                                });
-                            }
+                    var batchJson =
+                        JsonSerializer.Serialize(
+                            batchRequestBody
+                        );
 
 
-                            var answer =
-                                choices[0]
-                                    .GetProperty("message")
-                                    .GetProperty("content")
-                                    .GetString();
+                    Console.WriteLine(
+                        $"Ask LOOP -> Batch {batchNumber + 1} request size: {batchJson.Length} characters"
+                    );
 
 
-                            if (string.IsNullOrWhiteSpace(answer))
-                            {
-                                return StatusCode(502, new
-                                {
-                                    message =
-                                        "Groq returned an empty answer.",
+                    // =================================================
+                    // CALL GROQ FOR THIS BATCH
+                    // =================================================
 
-                                    groqResponse =
-                                        responseText
-                                });
-                            }
-
-
-                            return Ok(new
-                            {
-                                answer = answer,
-
-                                totalFeedback =
-                                    feedback.Count
-                            });
-                        }
+                    var batchResult =
+                        await CallGroqAsync(
+                            client,
+                            batchJson,
+                            model
+                        );
 
 
-                        // =================================================
-                        // 429 - RATE LIMIT
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                            HttpStatusCode.TooManyRequests
-                        )
-                        {
-                            if (attempt < maxAttempts)
-                            {
-                                int delaySeconds = 5;
-
-
-                                if (
-                                    response.Headers.RetryAfter != null
-                                    &&
-                                    response.Headers.RetryAfter.Delta.HasValue
-                                )
-                                {
-                                    delaySeconds =
-                                        Math.Max(
-                                            1,
-                                            (int)response
-                                                .Headers
-                                                .RetryAfter
-                                                .Delta
-                                                .Value
-                                                .TotalSeconds
-                                        );
-                                }
-
-
-                                Console.WriteLine(
-                                    $"Groq rate limit reached. " +
-                                    $"Waiting {delaySeconds} seconds..."
-                                );
-
-
-                                await Task.Delay(
-                                    TimeSpan.FromSeconds(
-                                        delaySeconds
-                                    )
-                                );
-
-
-                                continue;
-                            }
-
-
-                            return StatusCode(429, new
+                    if (!batchResult.Success)
+                    {
+                        return StatusCode(
+                            batchResult.StatusCode,
+                            new
                             {
                                 message =
-                                    "Groq API rate limit reached.",
+                                    batchResult.Message,
 
-                                statusCode =
-                                    (int)response.StatusCode,
+                                batch =
+                                    batchNumber + 1,
 
-                                groqError =
-                                    responseText
-                            });
-                        }
-
-
-                        // =================================================
-                        // 413 - REQUEST TOO LARGE
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                            HttpStatusCode.RequestEntityTooLarge
-                        )
-                        {
-                            return StatusCode(413, new
-                            {
-                                message =
-                                    "The customer feedback data is too large for one Groq request.",
-
-                                statusCode =
-                                    (int)response.StatusCode,
+                                totalBatches =
+                                    totalBatches,
 
                                 totalFeedback =
                                     feedback.Count,
 
-                                requestCharacters =
-                                    json.Length,
-
                                 groqError =
-                                    responseText
-                            });
-                        }
-
-
-                        // =================================================
-                        // 400 - BAD REQUEST
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                            HttpStatusCode.BadRequest
-                        )
-                        {
-                            return StatusCode(400, new
-                            {
-                                message =
-                                    "Groq rejected the request.",
-
-                                statusCode =
-                                    (int)response.StatusCode,
-
-                                groqError =
-                                    responseText
-                            });
-                        }
-
-
-                        // =================================================
-                        // 401 - INVALID API KEY
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                            HttpStatusCode.Unauthorized
-                        )
-                        {
-                            return StatusCode(401, new
-                            {
-                                message =
-                                    "Groq API key is invalid or unauthorized.",
-
-                                statusCode =
-                                    (int)response.StatusCode,
-
-                                groqError =
-                                    responseText
-                            });
-                        }
-
-
-                        // =================================================
-                        // 403 - FORBIDDEN
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                            HttpStatusCode.Forbidden
-                        )
-                        {
-                            return StatusCode(403, new
-                            {
-                                message =
-                                    "Groq denied access to this request.",
-
-                                statusCode =
-                                    (int)response.StatusCode,
-
-                                groqError =
-                                    responseText
-                            });
-                        }
-
-
-                        // =================================================
-                        // 404 - MODEL / ENDPOINT
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                            HttpStatusCode.NotFound
-                        )
-                        {
-                            return StatusCode(404, new
-                            {
-                                message =
-                                    "Groq model or endpoint was not found.",
-
-                                statusCode =
-                                    (int)response.StatusCode,
-
-                                model =
-                                    model,
-
-                                groqError =
-                                    responseText
-                            });
-                        }
-
-
-                        // =================================================
-                        // 500 / 502 / 503
-                        // =================================================
-
-                        if (
-                            response.StatusCode ==
-                                HttpStatusCode.InternalServerError
-                            ||
-                            response.StatusCode ==
-                                HttpStatusCode.BadGateway
-                            ||
-                            response.StatusCode ==
-                                HttpStatusCode.ServiceUnavailable
-                        )
-                        {
-                            if (attempt < maxAttempts)
-                            {
-                                var delaySeconds =
-                                    3 * Math.Pow(
-                                        2,
-                                        attempt - 1
-                                    );
-
-
-                                Console.WriteLine(
-                                    $"Groq server error. " +
-                                    $"Retrying after {delaySeconds} seconds..."
-                                );
-
-
-                                await Task.Delay(
-                                    TimeSpan.FromSeconds(
-                                        delaySeconds
-                                    )
-                                );
-
-
-                                continue;
-                            }
-
-
-                            return StatusCode(
-                                (int)response.StatusCode,
-                                new
-                                {
-                                    message =
-                                        "Groq AI service is temporarily unavailable.",
-
-                                    statusCode =
-                                        (int)response.StatusCode,
-
-                                    groqError =
-                                        responseText
-                                }
-                            );
-                        }
-
-
-                        // =================================================
-                        // OTHER ERROR
-                        // =================================================
-
-                        return StatusCode(
-                            (int)response.StatusCode,
-                            new
-                            {
-                                message =
-                                    "Groq could not process the question.",
-
-                                statusCode =
-                                    (int)response.StatusCode,
-
-                                groqError =
-                                    responseText
+                                    batchResult.Response
                             }
                         );
                     }
 
 
-                    // =================================================
-                    // HTTP REQUEST ERROR
-                    // =================================================
-
-                    catch (HttpRequestException ex)
+                    if (
+                        string.IsNullOrWhiteSpace(
+                            batchResult.Answer
+                        )
+                    )
                     {
-                        Console.WriteLine(
-                            $"Groq HTTP error: {ex.Message}"
-                        );
-
-
-                        if (attempt < maxAttempts)
-                        {
-                            var delaySeconds =
-                                3 * Math.Pow(
-                                    2,
-                                    attempt - 1
-                                );
-
-
-                            await Task.Delay(
-                                TimeSpan.FromSeconds(
-                                    delaySeconds
-                                )
-                            );
-
-
-                            continue;
-                        }
-
-
-                        return StatusCode(503, new
+                        return StatusCode(502, new
                         {
                             message =
-                                "Unable to connect to Groq API.",
+                                "Groq returned an empty batch analysis.",
 
-                            error =
-                                ex.Message
+                            batch =
+                                batchNumber + 1
                         });
                     }
+
+
+                    batchAnalyses.Add(
+                        $"BATCH {batchNumber + 1}:\n" +
+                        batchResult.Answer
+                    );
+
+
+                    Console.WriteLine(
+                        $"Ask LOOP -> Batch {batchNumber + 1}/{totalBatches} completed."
+                    );
                 }
 
 
                 // =================================================
-                // FINAL FALLBACK
+                // 10. COMBINE BATCH ANALYSES
                 // =================================================
 
-                return StatusCode(503, new
+                var analysisBuilder =
+                    new StringBuilder();
+
+
+                foreach (var analysis in batchAnalyses)
                 {
-                    message =
-                        "Groq AI is temporarily unavailable."
+                    analysisBuilder.AppendLine(
+                        analysis
+                    );
+
+                    analysisBuilder.AppendLine();
+                }
+
+
+                var combinedAnalysis =
+                    analysisBuilder.ToString();
+
+
+                Console.WriteLine(
+                    $"Ask LOOP -> Combined analysis characters: {combinedAnalysis.Length}"
+                );
+
+
+                // =================================================
+                // 11. FINAL GROQ PROMPT
+                // =================================================
+
+                var finalPrompt = $"""
+You are LOOP, a customer feedback intelligence assistant.
+
+The workspace contains {feedback.Count} customer feedback records.
+
+The feedback was processed in multiple batches because sending
+all records in one request can exceed the AI request size.
+
+The following are factual analyses from ALL batches.
+
+USER QUESTION:
+
+{request.Question}
+
+BATCH ANALYSES:
+
+{combinedAnalysis}
+
+IMPORTANT RULES:
+
+- Answer the user's question using only the information contained
+  in the batch analyses.
+- The batch analyses represent the complete workspace feedback.
+- Do not invent information.
+- Do not make assumptions.
+- Give a clear and concise business answer.
+- When useful, mention counts or percentages.
+- If the user asks about complaints, focus on negative feedback.
+- If the user asks about satisfaction, focus on positive feedback.
+- If the user asks about themes, identify repeated patterns.
+- If the user asks about sentiment, use the sentiment information.
+- If there is not enough information, say:
+  "There is not enough feedback data to answer this."
+- Do not mention internal batching unless the user asks about it.
+
+Give the final answer now.
+""";
+
+
+                // =================================================
+                // 12. FINAL REQUEST BODY
+                // =================================================
+
+                var finalRequestBody = new
+                {
+                    model = model,
+
+                    messages = new object[]
+                    {
+                        new
+                        {
+                            role = "system",
+
+                            content =
+                                "You are LOOP, a customer feedback " +
+                                "intelligence assistant. " +
+                                "Only use the supplied customer feedback analysis."
+                        },
+
+                        new
+                        {
+                            role = "user",
+
+                            content = finalPrompt
+                        }
+                    },
+
+                    temperature = 0.2,
+
+                    max_tokens = 500
+                };
+
+
+                var finalJson =
+                    JsonSerializer.Serialize(
+                        finalRequestBody
+                    );
+
+
+                Console.WriteLine(
+                    $"Ask LOOP -> Final request size: {finalJson.Length} characters"
+                );
+
+
+                // =================================================
+                // 13. FINAL GROQ CALL
+                // =================================================
+
+                var finalResult =
+                    await CallGroqAsync(
+                        client,
+                        finalJson,
+                        model
+                    );
+
+
+                if (!finalResult.Success)
+                {
+                    return StatusCode(
+                        finalResult.StatusCode,
+                        new
+                        {
+                            message =
+                                finalResult.Message,
+
+                            totalFeedback =
+                                feedback.Count,
+
+                            totalBatches =
+                                totalBatches,
+
+                            groqError =
+                                finalResult.Response
+                        }
+                    );
+                }
+
+
+                if (
+                    string.IsNullOrWhiteSpace(
+                        finalResult.Answer
+                    )
+                )
+                {
+                    return StatusCode(502, new
+                    {
+                        message =
+                            "Groq did not generate a final answer.",
+
+                        totalFeedback =
+                            feedback.Count
+                    });
+                }
+
+
+                // =================================================
+                // 14. SUCCESS
+                // =================================================
+
+                Console.WriteLine(
+                    "Ask LOOP -> Final answer generated successfully."
+                );
+
+
+                return Ok(new
+                {
+                    answer =
+                        finalResult.Answer,
+
+                    totalFeedback =
+                        feedback.Count,
+
+                    totalBatches =
+                        totalBatches
                 });
             }
 
 
             // =========================================================
-            // JSON ERROR
+            // OUTER JSON ERROR
             // =========================================================
 
             catch (JsonException ex)
@@ -756,7 +605,7 @@ namespace LOOP.API.Controllers
 
 
             // =========================================================
-            // REQUEST CANCELLED / TIMEOUT
+            // REQUEST TIMEOUT
             // =========================================================
 
             catch (TaskCanceledException ex)
@@ -794,7 +643,6 @@ namespace LOOP.API.Controllers
                     "=========================================="
                 );
 
-
                 return StatusCode(500, new
                 {
                     message =
@@ -804,6 +652,459 @@ namespace LOOP.API.Controllers
                         ex.Message
                 });
             }
+        }
+
+
+        // =========================================================
+        // GROQ HELPER
+        // =========================================================
+
+        private async Task<GroqResult> CallGroqAsync(
+            HttpClient client,
+            string json,
+            string model)
+        {
+            const int maxAttempts = 3;
+
+
+            for (
+                int attempt = 1;
+                attempt <= maxAttempts;
+                attempt++)
+            {
+                try
+                {
+                    using var content =
+                        new StringContent(
+                            json,
+                            Encoding.UTF8,
+                            "application/json"
+                        );
+
+
+                    Console.WriteLine(
+                        $"Ask LOOP -> Groq attempt {attempt}/{maxAttempts}"
+                    );
+
+
+                    var response =
+                        await client.PostAsync(
+                            "https://api.groq.com/openai/v1/chat/completions",
+                            content
+                        );
+
+
+                    var responseText =
+                        await response.Content.ReadAsStringAsync();
+
+
+                    Console.WriteLine(
+                        "=========================================="
+                    );
+
+                    Console.WriteLine(
+                        $"GROQ STATUS: {(int)response.StatusCode}"
+                    );
+
+                    Console.WriteLine(
+                        $"GROQ RESPONSE: {responseText}"
+                    );
+
+                    Console.WriteLine(
+                        "=========================================="
+                    );
+
+
+                    // =================================================
+                    // SUCCESS
+                    // =================================================
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using var document =
+                            JsonDocument.Parse(
+                                responseText
+                            );
+
+
+                        if (
+                            !document.RootElement.TryGetProperty(
+                                "choices",
+                                out var choices
+                            )
+                        )
+                        {
+                            return new GroqResult
+                            {
+                                Success = false,
+                                StatusCode = 502,
+                                Message =
+                                    "Groq returned an unexpected response.",
+                                Response =
+                                    responseText
+                            };
+                        }
+
+
+                        if (
+                            choices.GetArrayLength() == 0
+                        )
+                        {
+                            return new GroqResult
+                            {
+                                Success = false,
+                                StatusCode = 502,
+                                Message =
+                                    "Groq did not generate an answer.",
+                                Response =
+                                    responseText
+                            };
+                        }
+
+
+                        var answer =
+                            choices[0]
+                                .GetProperty("message")
+                                .GetProperty("content")
+                                .GetString();
+
+
+                        if (
+                            string.IsNullOrWhiteSpace(
+                                answer
+                            )
+                        )
+                        {
+                            return new GroqResult
+                            {
+                                Success = false,
+                                StatusCode = 502,
+                                Message =
+                                    "Groq returned an empty answer.",
+                                Response =
+                                    responseText
+                            };
+                        }
+
+
+                        return new GroqResult
+                        {
+                            Success = true,
+                            StatusCode = 200,
+                            Message = "Success",
+                            Answer = answer,
+                            Response = responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 429 - RATE LIMIT
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                        HttpStatusCode.TooManyRequests
+                    )
+                    {
+                        if (attempt < maxAttempts)
+                        {
+                            int delaySeconds = 5;
+
+
+                            if (
+                                response.Headers.RetryAfter != null
+                                &&
+                                response.Headers.RetryAfter.Delta.HasValue
+                            )
+                            {
+                                delaySeconds =
+                                    Math.Max(
+                                        1,
+                                        (int)
+                                            response
+                                                .Headers
+                                                .RetryAfter
+                                                .Delta
+                                                .Value
+                                                .TotalSeconds
+                                    );
+                            }
+
+
+                            Console.WriteLine(
+                                $"Groq rate limit reached. Waiting {delaySeconds} seconds..."
+                            );
+
+
+                            await Task.Delay(
+                                TimeSpan.FromSeconds(
+                                    delaySeconds
+                                )
+                            );
+
+
+                            continue;
+                        }
+
+
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode = 429,
+                            Message =
+                                "Groq API rate limit reached.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 413 - REQUEST TOO LARGE
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                        HttpStatusCode.RequestEntityTooLarge
+                    )
+                    {
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode = 413,
+                            Message =
+                                "The Groq request is too large.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 400 - BAD REQUEST
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                        HttpStatusCode.BadRequest
+                    )
+                    {
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode = 400,
+                            Message =
+                                "Groq rejected the request.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 401 - INVALID API KEY
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                        HttpStatusCode.Unauthorized
+                    )
+                    {
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode = 401,
+                            Message =
+                                "Groq API key is invalid or unauthorized.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 403 - FORBIDDEN
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                        HttpStatusCode.Forbidden
+                    )
+                    {
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode = 403,
+                            Message =
+                                "Groq denied access to this request.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 404 - MODEL / ENDPOINT
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                        HttpStatusCode.NotFound
+                    )
+                    {
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode = 404,
+                            Message =
+                                "Groq model or endpoint was not found.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // 500 / 502 / 503
+                    // =================================================
+
+                    if (
+                        response.StatusCode ==
+                            HttpStatusCode.InternalServerError
+                        ||
+                        response.StatusCode ==
+                            HttpStatusCode.BadGateway
+                        ||
+                        response.StatusCode ==
+                            HttpStatusCode.ServiceUnavailable
+                    )
+                    {
+                        if (attempt < maxAttempts)
+                        {
+                            var delaySeconds =
+                                3 * Math.Pow(
+                                    2,
+                                    attempt - 1
+                                );
+
+
+                            Console.WriteLine(
+                                $"Groq server error. Retrying after {delaySeconds} seconds..."
+                            );
+
+
+                            await Task.Delay(
+                                TimeSpan.FromSeconds(
+                                    delaySeconds
+                                )
+                            );
+
+
+                            continue;
+                        }
+
+
+                        return new GroqResult
+                        {
+                            Success = false,
+                            StatusCode =
+                                (int)response.StatusCode,
+                            Message =
+                                "Groq AI service is temporarily unavailable.",
+                            Response =
+                                responseText
+                        };
+                    }
+
+
+                    // =================================================
+                    // OTHER ERROR
+                    // =================================================
+
+                    return new GroqResult
+                    {
+                        Success = false,
+                        StatusCode =
+                            (int)response.StatusCode,
+                        Message =
+                            "Groq could not process the request.",
+                        Response =
+                            responseText
+                    };
+                }
+
+
+                // =====================================================
+                // HTTP REQUEST ERROR
+                // =====================================================
+
+                catch (HttpRequestException ex)
+                {
+                    Console.WriteLine(
+                        $"Groq HTTP error: {ex.Message}"
+                    );
+
+
+                    if (attempt < maxAttempts)
+                    {
+                        var delaySeconds =
+                            3 * Math.Pow(
+                                2,
+                                attempt - 1
+                            );
+
+
+                        await Task.Delay(
+                            TimeSpan.FromSeconds(
+                                delaySeconds
+                            )
+                        );
+
+
+                        continue;
+                    }
+
+
+                    return new GroqResult
+                    {
+                        Success = false,
+                        StatusCode = 503,
+                        Message =
+                            "Unable to connect to Groq API.",
+                        Response =
+                            ex.Message
+                    };
+                }
+            }
+
+
+            return new GroqResult
+            {
+                Success = false,
+                StatusCode = 503,
+                Message =
+                    "Groq AI is temporarily unavailable.",
+                Response = ""
+            };
+        }
+
+
+        // =========================================================
+        // GROQ RESULT CLASS
+        // =========================================================
+
+        private class GroqResult
+        {
+            public bool Success { get; set; }
+
+            public int StatusCode { get; set; }
+
+            public string Message { get; set; } = "";
+
+            public string Answer { get; set; } = "";
+
+            public string Response { get; set; } = "";
         }
     }
 }

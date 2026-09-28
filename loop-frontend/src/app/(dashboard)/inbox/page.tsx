@@ -144,7 +144,7 @@ export default function InboxPage() {
       }
 
       const response = await fetch(
-        `https://localhost:7248/api/Feedback?${params.toString()}`,
+        `https://loop-api-s464.onrender.com/api/Feedback?${params.toString()}`,
         {
           method: "GET",
           headers: {
@@ -325,7 +325,7 @@ export default function InboxPage() {
       );
 
       const response = await fetch(
-        "https://localhost:7248/api/Feedback/import",
+        "https://loop-api-s464.onrender.com/api/Feedback/import",
         {
           method: "POST",
           headers: {

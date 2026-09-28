@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        "https://localhost:7248/api/Auth/login",
+        "https://loop-api-s464.onrender.com/api/Auth/login",
         {
           method: "POST",
 

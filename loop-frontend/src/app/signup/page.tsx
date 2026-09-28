@@ -47,7 +47,7 @@ export default function SignupPage() {
 
     try {
       const response = await fetch(
-        "https://localhost:7248/api/Auth/signup",
+        "https://loop-api-s464.onrender.com/api/Auth/signup",
         {
           method: "POST",
           headers: {

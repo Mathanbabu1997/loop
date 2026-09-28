@@ -24,7 +24,7 @@ export default function AskLoopPage() {
       }
 
       const response = await fetch(
-        "https://localhost:7248/api/AskLoop",
+        "https://loop-api-s464.onrender.com/api/AskLoop",
         {
           method: "POST",
 
