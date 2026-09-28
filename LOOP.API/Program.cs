@@ -28,6 +28,11 @@ namespace LOOP.API
 
             builder.Services.AddControllers();
 
+
+            // =====================================================
+            // CORS
+            // =====================================================
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("Frontend", policy =>
@@ -41,6 +46,7 @@ namespace LOOP.API
                         .AllowAnyMethod();
                 });
             });
+
 
             // =====================================================
             // JWT Authentication
@@ -141,12 +147,11 @@ namespace LOOP.API
             // =====================================================
             // Swagger
             // =====================================================
+            // Enabled in both Development and Production
+            // so Swagger works on Render.
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
 
             // =====================================================
@@ -155,7 +160,13 @@ namespace LOOP.API
 
             app.UseHttpsRedirection();
 
+
+            // =====================================================
+            // CORS
+            // =====================================================
+
             app.UseCors("Frontend");
+
 
             // =====================================================
             // Authentication
