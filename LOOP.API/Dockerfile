@@ -1,21 +1,19 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-
 WORKDIR /src
+
+COPY ["LOOP.API/LOOP.API.csproj", "LOOP.API/"]
+
+RUN dotnet restore "LOOP.API/LOOP.API.csproj"
 
 COPY . .
 
-RUN dotnet restore
+WORKDIR "/src/LOOP.API"
 
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "LOOP.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
-
 WORKDIR /app
 
 COPY --from=build /app/publish .
-
-EXPOSE 8080
-
-ENV ASPNETCORE_URLS=http://+:8080
 
 ENTRYPOINT ["dotnet", "LOOP.API.dll"]
