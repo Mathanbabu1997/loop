@@ -48,7 +48,6 @@ namespace LOOP.API.Controllers
                     });
                 }
 
-
                 // =================================================
                 // 2. GET WORKSPACE ID
                 // =================================================
@@ -66,17 +65,8 @@ namespace LOOP.API.Controllers
                     });
                 }
 
-
                 // =================================================
-                // 3. LOAD ALL FEEDBACK
-                // =================================================
-                //
-                // IMPORTANT:
-                // DO NOT USE Take(30) HERE.
-                //
-                // If workspace has 210 records,
-                // all 210 records will be loaded.
-                //
+                // 3. LOAD ALL FEEDBACK FOR WORKSPACE
                 // =================================================
 
                 var feedback = await _context.Feedbacks
@@ -94,7 +84,6 @@ namespace LOOP.API.Controllers
                     })
                     .ToListAsync();
 
-
                 // =================================================
                 // 4. CHECK DATA
                 // =================================================
@@ -110,11 +99,9 @@ namespace LOOP.API.Controllers
                     });
                 }
 
-
                 Console.WriteLine(
                     $"Ask LOOP -> Total feedback records loaded: {feedback.Count}"
                 );
-
 
                 // =================================================
                 // 5. GROQ API KEY
@@ -132,19 +119,14 @@ namespace LOOP.API.Controllers
                     });
                 }
 
-
                 // =================================================
                 // 6. GROQ MODEL
                 // =================================================
+                // Model is intentionally hardcoded.
+                // No Groq:Model environment variable required.
 
-                var model =
-                    _configuration["Groq:Model"];
-
-                if (string.IsNullOrWhiteSpace(model))
-                {
-                    model = "openai/gpt-oss-120b";
-                }
-
+                const string model =
+                    "openai/gpt-oss-120b";
 
                 // =================================================
                 // 7. BATCH SETTINGS
@@ -154,7 +136,6 @@ namespace LOOP.API.Controllers
 
                 var batchAnalyses =
                     new List<string>();
-
 
                 // =================================================
                 // 8. HTTP CLIENT
@@ -177,9 +158,8 @@ namespace LOOP.API.Controllers
                     )
                 );
 
-
                 // =================================================
-                // 9. PROCESS FEEDBACK IN BATCHES
+                // 9. CALCULATE BATCHES
                 // =================================================
 
                 int totalBatches =
@@ -188,11 +168,13 @@ namespace LOOP.API.Controllers
                         (double)batchSize
                     );
 
-
                 Console.WriteLine(
                     $"Ask LOOP -> Processing {totalBatches} batches of {batchSize} records."
                 );
 
+                // =================================================
+                // 10. PROCESS BATCHES
+                // =================================================
 
                 for (
                     int batchNumber = 0;
@@ -203,18 +185,17 @@ namespace LOOP.API.Controllers
                     int skip =
                         batchNumber * batchSize;
 
-
                     var batch =
                         feedback
                             .Skip(skip)
                             .Take(batchSize)
                             .ToList();
 
-
                     Console.WriteLine(
-                        $"Ask LOOP -> Processing batch {batchNumber + 1}/{totalBatches} with {batch.Count} records."
+                        $"Ask LOOP -> Processing batch " +
+                        $"{batchNumber + 1}/{totalBatches} " +
+                        $"with {batch.Count} records."
                     );
-
 
                     // =================================================
                     // BUILD BATCH TEXT
@@ -222,7 +203,6 @@ namespace LOOP.API.Controllers
 
                     var batchBuilder =
                         new StringBuilder();
-
 
                     for (int i = 0; i < batch.Count; i++)
                     {
@@ -239,10 +219,8 @@ namespace LOOP.API.Controllers
                         );
                     }
 
-
                     var batchText =
                         batchBuilder.ToString();
-
 
                     // =================================================
                     // BATCH PROMPT
@@ -282,7 +260,6 @@ CUSTOMER FEEDBACK:
 {batchText}
 """;
 
-
                     // =================================================
                     // GROQ REQUEST BODY
                     // =================================================
@@ -313,32 +290,35 @@ CUSTOMER FEEDBACK:
 
                         temperature = 0.2,
 
-                        max_tokens = 300
-                    };
+                        max_completion_tokens = 1000,
 
+                        reasoning_effort = "low"
+                    };
 
                     var batchJson =
                         JsonSerializer.Serialize(
                             batchRequestBody
                         );
 
-
                     Console.WriteLine(
-                        $"Ask LOOP -> Batch {batchNumber + 1} request size: {batchJson.Length} characters"
+                        $"Ask LOOP -> Batch " +
+                        $"{batchNumber + 1} request size: " +
+                        $"{batchJson.Length} characters"
                     );
 
-
                     // =================================================
-                    // CALL GROQ FOR THIS BATCH
+                    // CALL GROQ
                     // =================================================
 
                     var batchResult =
                         await CallGroqAsync(
                             client,
-                            batchJson,
-                            model
+                            batchJson
                         );
 
+                    // =================================================
+                    // CHECK GROQ RESULT
+                    // =================================================
 
                     if (!batchResult.Success)
                     {
@@ -364,7 +344,6 @@ CUSTOMER FEEDBACK:
                         );
                     }
 
-
                     if (
                         string.IsNullOrWhiteSpace(
                             batchResult.Answer
@@ -381,26 +360,23 @@ CUSTOMER FEEDBACK:
                         });
                     }
 
-
                     batchAnalyses.Add(
                         $"BATCH {batchNumber + 1}:\n" +
                         batchResult.Answer
                     );
 
-
                     Console.WriteLine(
-                        $"Ask LOOP -> Batch {batchNumber + 1}/{totalBatches} completed."
+                        $"Ask LOOP -> Batch " +
+                        $"{batchNumber + 1}/{totalBatches} completed."
                     );
                 }
 
-
                 // =================================================
-                // 10. COMBINE BATCH ANALYSES
+                // 11. COMBINE BATCH ANALYSES
                 // =================================================
 
                 var analysisBuilder =
                     new StringBuilder();
-
 
                 foreach (var analysis in batchAnalyses)
                 {
@@ -411,18 +387,16 @@ CUSTOMER FEEDBACK:
                     analysisBuilder.AppendLine();
                 }
 
-
                 var combinedAnalysis =
                     analysisBuilder.ToString();
 
-
                 Console.WriteLine(
-                    $"Ask LOOP -> Combined analysis characters: {combinedAnalysis.Length}"
+                    $"Ask LOOP -> Combined analysis characters: " +
+                    $"{combinedAnalysis.Length}"
                 );
 
-
                 // =================================================
-                // 11. FINAL GROQ PROMPT
+                // 12. FINAL PROMPT
                 // =================================================
 
                 var finalPrompt = $"""
@@ -463,9 +437,8 @@ IMPORTANT RULES:
 Give the final answer now.
 """;
 
-
                 // =================================================
-                // 12. FINAL REQUEST BODY
+                // 13. FINAL REQUEST BODY
                 // =================================================
 
                 var finalRequestBody = new
@@ -494,32 +467,30 @@ Give the final answer now.
 
                     temperature = 0.2,
 
-                    max_tokens = 500
-                };
+                    max_completion_tokens = 1500,
 
+                    reasoning_effort = "low"
+                };
 
                 var finalJson =
                     JsonSerializer.Serialize(
                         finalRequestBody
                     );
 
-
                 Console.WriteLine(
-                    $"Ask LOOP -> Final request size: {finalJson.Length} characters"
+                    $"Ask LOOP -> Final request size: " +
+                    $"{finalJson.Length} characters"
                 );
 
-
                 // =================================================
-                // 13. FINAL GROQ CALL
+                // 14. FINAL GROQ CALL
                 // =================================================
 
                 var finalResult =
                     await CallGroqAsync(
                         client,
-                        finalJson,
-                        model
+                        finalJson
                     );
-
 
                 if (!finalResult.Success)
                 {
@@ -542,7 +513,6 @@ Give the final answer now.
                     );
                 }
 
-
                 if (
                     string.IsNullOrWhiteSpace(
                         finalResult.Answer
@@ -559,15 +529,13 @@ Give the final answer now.
                     });
                 }
 
-
                 // =================================================
-                // 14. SUCCESS
+                // 15. SUCCESS
                 // =================================================
 
                 Console.WriteLine(
                     "Ask LOOP -> Final answer generated successfully."
                 );
-
 
                 return Ok(new
                 {
@@ -582,9 +550,8 @@ Give the final answer now.
                 });
             }
 
-
             // =========================================================
-            // OUTER JSON ERROR
+            // JSON ERROR
             // =========================================================
 
             catch (JsonException ex)
@@ -603,9 +570,8 @@ Give the final answer now.
                 });
             }
 
-
             // =========================================================
-            // REQUEST TIMEOUT
+            // TIMEOUT
             // =========================================================
 
             catch (TaskCanceledException ex)
@@ -623,7 +589,6 @@ Give the final answer now.
                         ex.Message
                 });
             }
-
 
             // =========================================================
             // GENERAL ERROR
@@ -654,18 +619,15 @@ Give the final answer now.
             }
         }
 
-
         // =========================================================
         // GROQ HELPER
         // =========================================================
 
         private async Task<GroqResult> CallGroqAsync(
             HttpClient client,
-            string json,
-            string model)
+            string json)
         {
             const int maxAttempts = 3;
-
 
             for (
                 int attempt = 1;
@@ -681,11 +643,10 @@ Give the final answer now.
                             "application/json"
                         );
 
-
                     Console.WriteLine(
-                        $"Ask LOOP -> Groq attempt {attempt}/{maxAttempts}"
+                        $"Ask LOOP -> Groq attempt " +
+                        $"{attempt}/{maxAttempts}"
                     );
-
 
                     var response =
                         await client.PostAsync(
@@ -693,10 +654,8 @@ Give the final answer now.
                             content
                         );
 
-
                     var responseText =
                         await response.Content.ReadAsStringAsync();
-
 
                     Console.WriteLine(
                         "=========================================="
@@ -714,7 +673,6 @@ Give the final answer now.
                         "=========================================="
                     );
 
-
                     // =================================================
                     // SUCCESS
                     // =================================================
@@ -726,9 +684,15 @@ Give the final answer now.
                                 responseText
                             );
 
+                        var root =
+                            document.RootElement;
+
+                        // -------------------------------------------------
+                        // choices
+                        // -------------------------------------------------
 
                         if (
-                            !document.RootElement.TryGetProperty(
+                            !root.TryGetProperty(
                                 "choices",
                                 out var choices
                             )
@@ -739,14 +703,14 @@ Give the final answer now.
                                 Success = false,
                                 StatusCode = 502,
                                 Message =
-                                    "Groq returned an unexpected response.",
+                                    "Groq returned an unexpected response: choices missing.",
                                 Response =
                                     responseText
                             };
                         }
 
-
                         if (
+                            choices.ValueKind != JsonValueKind.Array ||
                             choices.GetArrayLength() == 0
                         )
                         {
@@ -761,13 +725,90 @@ Give the final answer now.
                             };
                         }
 
+                        var firstChoice =
+                            choices[0];
 
-                        var answer =
-                            choices[0]
-                                .GetProperty("message")
-                                .GetProperty("content")
-                                .GetString();
+                        // -------------------------------------------------
+                        // message
+                        // -------------------------------------------------
 
+                        if (
+                            !firstChoice.TryGetProperty(
+                                "message",
+                                out var message
+                            )
+                        )
+                        {
+                            return new GroqResult
+                            {
+                                Success = false,
+                                StatusCode = 502,
+                                Message =
+                                    "Groq response does not contain a message.",
+                                Response =
+                                    responseText
+                            };
+                        }
+
+                        // -------------------------------------------------
+                        // content
+                        // -------------------------------------------------
+
+                        string? answer = null;
+
+                        if (
+                            message.TryGetProperty(
+                                "content",
+                                out var contentElement
+                            )
+                        )
+                        {
+                            if (
+                                contentElement.ValueKind ==
+                                JsonValueKind.String
+                            )
+                            {
+                                answer =
+                                    contentElement.GetString();
+                            }
+                        }
+
+                        if (
+                            string.IsNullOrWhiteSpace(
+                                answer
+                            )
+                        )
+                        {
+                            // Some reasoning responses may expose
+                            // useful text in reasoning_content.
+                            if (
+                                message.TryGetProperty(
+                                    "reasoning_content",
+                                    out var reasoningElement
+                                )
+                                &&
+                                reasoningElement.ValueKind ==
+                                JsonValueKind.String
+                            )
+                            {
+                                var reasoning =
+                                    reasoningElement.GetString();
+
+                                if (
+                                    !string.IsNullOrWhiteSpace(
+                                        reasoning
+                                    )
+                                )
+                                {
+                                    Console.WriteLine(
+                                        "Groq content was empty, but reasoning_content was returned."
+                                    );
+
+                                    answer =
+                                        reasoning;
+                                }
+                            }
+                        }
 
                         if (
                             string.IsNullOrWhiteSpace(
@@ -786,7 +827,6 @@ Give the final answer now.
                             };
                         }
 
-
                         return new GroqResult
                         {
                             Success = true,
@@ -796,7 +836,6 @@ Give the final answer now.
                             Response = responseText
                         };
                     }
-
 
                     // =================================================
                     // 429 - RATE LIMIT
@@ -810,7 +849,6 @@ Give the final answer now.
                         if (attempt < maxAttempts)
                         {
                             int delaySeconds = 5;
-
 
                             if (
                                 response.Headers.RetryAfter != null
@@ -831,11 +869,10 @@ Give the final answer now.
                                     );
                             }
 
-
                             Console.WriteLine(
-                                $"Groq rate limit reached. Waiting {delaySeconds} seconds..."
+                                $"Groq rate limit reached. " +
+                                $"Waiting {delaySeconds} seconds..."
                             );
-
 
                             await Task.Delay(
                                 TimeSpan.FromSeconds(
@@ -843,10 +880,8 @@ Give the final answer now.
                                 )
                             );
 
-
                             continue;
                         }
-
 
                         return new GroqResult
                         {
@@ -858,7 +893,6 @@ Give the final answer now.
                                 responseText
                         };
                     }
-
 
                     // =================================================
                     // 413 - REQUEST TOO LARGE
@@ -880,7 +914,6 @@ Give the final answer now.
                         };
                     }
 
-
                     // =================================================
                     // 400 - BAD REQUEST
                     // =================================================
@@ -900,7 +933,6 @@ Give the final answer now.
                                 responseText
                         };
                     }
-
 
                     // =================================================
                     // 401 - INVALID API KEY
@@ -922,7 +954,6 @@ Give the final answer now.
                         };
                     }
 
-
                     // =================================================
                     // 403 - FORBIDDEN
                     // =================================================
@@ -943,7 +974,6 @@ Give the final answer now.
                         };
                     }
 
-
                     // =================================================
                     // 404 - MODEL / ENDPOINT
                     // =================================================
@@ -963,7 +993,6 @@ Give the final answer now.
                                 responseText
                         };
                     }
-
 
                     // =================================================
                     // 500 / 502 / 503
@@ -988,11 +1017,10 @@ Give the final answer now.
                                     attempt - 1
                                 );
 
-
                             Console.WriteLine(
-                                $"Groq server error. Retrying after {delaySeconds} seconds..."
+                                $"Groq server error. " +
+                                $"Retrying after {delaySeconds} seconds..."
                             );
-
 
                             await Task.Delay(
                                 TimeSpan.FromSeconds(
@@ -1000,10 +1028,8 @@ Give the final answer now.
                                 )
                             );
 
-
                             continue;
                         }
-
 
                         return new GroqResult
                         {
@@ -1016,7 +1042,6 @@ Give the final answer now.
                                 responseText
                         };
                     }
-
 
                     // =================================================
                     // OTHER ERROR
@@ -1034,7 +1059,6 @@ Give the final answer now.
                     };
                 }
 
-
                 // =====================================================
                 // HTTP REQUEST ERROR
                 // =====================================================
@@ -1045,7 +1069,6 @@ Give the final answer now.
                         $"Groq HTTP error: {ex.Message}"
                     );
 
-
                     if (attempt < maxAttempts)
                     {
                         var delaySeconds =
@@ -1054,17 +1077,14 @@ Give the final answer now.
                                 attempt - 1
                             );
 
-
                         await Task.Delay(
                             TimeSpan.FromSeconds(
                                 delaySeconds
                             )
                         );
 
-
                         continue;
                     }
-
 
                     return new GroqResult
                     {
@@ -1078,7 +1098,6 @@ Give the final answer now.
                 }
             }
 
-
             return new GroqResult
             {
                 Success = false,
@@ -1088,7 +1107,6 @@ Give the final answer now.
                 Response = ""
             };
         }
-
 
         // =========================================================
         // GROQ RESULT CLASS
