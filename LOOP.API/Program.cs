@@ -32,7 +32,6 @@ namespace LOOP.API
             // =====================================================
             // CORS
             // =====================================================
-
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("Frontend", policy =>
@@ -40,13 +39,13 @@ namespace LOOP.API
                     policy
                         .WithOrigins(
                             "http://localhost:3000",
-                            "http://127.0.0.1:3000"
+                            "http://127.0.0.1:3000",
+                            "https://loop-loop-be3c.vercel.app"
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod();
                 });
             });
-
 
             // =====================================================
             // JWT Authentication
